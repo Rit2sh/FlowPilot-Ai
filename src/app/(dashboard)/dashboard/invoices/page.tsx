@@ -90,6 +90,22 @@ export default function InvoicesPage() {
     }
   };
 
+  const handleSimulateCapture = async (orderId: string) => {
+    try {
+      const res = await fetch("/api/paypal/capture", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orderId }),
+      });
+      if (res.ok) {
+        alert("Payment captured & settled via PayPal Sandbox! Status updated to PAID.");
+        fetchInvoices();
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "PAID":
@@ -209,16 +225,29 @@ export default function InvoicesPage() {
                     </td>
                     <td className="p-4">{getStatusBadge(inv.status)}</td>
                     <td className="p-4">
-                      {inv.checkoutUrl ? (
-                        <a
-                          href={inv.checkoutUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-[#00F59B] bg-emerald-950/60 border border-emerald-500/30 hover:border-[#00F59B] px-2.5 py-1 rounded-md transition-colors"
-                        >
-                          <CreditCard className="w-3 h-3" />
-                          Pay with PayPal <ExternalLink className="w-2.5 h-2.5" />
-                        </a>
+                      {inv.status === "PAID" ? (
+                        <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-emerald-400 bg-emerald-950/60 border border-emerald-500/30 px-2.5 py-1 rounded-md">
+                          <CheckCircle className="w-3 h-3" /> Settled via PayPal
+                        </span>
+                      ) : inv.checkoutUrl ? (
+                        <div className="flex items-center gap-2">
+                          <a
+                            href={inv.checkoutUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-[#00F59B] bg-emerald-950/60 border border-emerald-500/30 hover:border-[#00F59B] px-2.5 py-1 rounded-md transition-colors"
+                          >
+                            <CreditCard className="w-3 h-3" />
+                            Pay with PayPal <ExternalLink className="w-2.5 h-2.5" />
+                          </a>
+                          <button
+                            onClick={() => handleSimulateCapture(inv.paypalOrderId || inv.id)}
+                            className="inline-flex items-center text-[10px] font-semibold text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 border border-slate-700 px-2 py-1 rounded-md transition-colors"
+                            title="Simulate Buyer Completing PayPal Checkout"
+                          >
+                            Simulate Capture
+                          </button>
+                        </div>
                       ) : (
                         <span className="text-slate-500 text-[11px]">N/A</span>
                       )}
