@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:18-alpine
+    container_name: flowpilot-postgres
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: flowpilot
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  app:
+    build: .
+    container_name: flowpilot-app
+    restart: always
+    depends_on:
+      - db
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: "postgresql://postgres:password@db:5432/flowpilot?schema=public"
+      AUTH_SECRET: "flowpilot-production-secret-key-32-chars-minimum"
+      NEXTAUTH_SECRET: "flowpilot-production-secret-key-32-chars-minimum"
+      NEXTAUTH_URL: "http://localhost:3000"
+      PAYPAL_BASE_URL: "https://api-m.sandbox.paypal.com"
+      NEXT_PUBLIC_APP_URL: "http://localhost:3000"
+      NEXT_PUBLIC_ENVIRONMENT: "sandbox"
+
+volumes:
+  postgres_data:

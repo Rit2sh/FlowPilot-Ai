@@ -1,0 +1,154 @@
+{
+  "info": {
+    "name": "FlowPilot AI - PayPal AI Hackathon API Collection",
+    "description": "Comprehensive Postman Collection for FlowPilot AI — Autonomous Financial Operations Platform powered by PayPal and AI.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Login as Founder",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"ritesh@flowpilot.ai\",\n  \"password\": \"Demo1234!\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/auth/login", "host": ["{{baseUrl}}"], "path": ["api", "auth", "login"] }
+          }
+        },
+        {
+          "name": "Get Current Session",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/auth/me", "host": ["{{baseUrl}}"], "path": ["api", "auth", "me"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "PayPal Sandbox Operations",
+      "item": [
+        {
+          "name": "Create PayPal Order",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 500.00,\n  \"currency\": \"USD\",\n  \"description\": \"Full-Stack Deliverable Milestone 1\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/paypal/orders", "host": ["{{baseUrl}}"], "path": ["api", "paypal", "orders"] }
+          }
+        },
+        {
+          "name": "Capture PayPal Order",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"orderId\": \"ORD-DEMO-TEST-1001\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/paypal/capture", "host": ["{{baseUrl}}"], "path": ["api", "paypal", "capture"] }
+          }
+        },
+        {
+          "name": "Receive PayPal Webhook",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "paypal-auth-algo", "value": "SHA256withRSA" },
+              { "key": "paypal-transmission-id", "value": "trans-postman-test" },
+              { "key": "paypal-transmission-sig", "value": "sig-hash" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": \"WH-POSTMAN-001\",\n  \"event_type\": \"PAYMENT.CAPTURE.COMPLETED\",\n  \"summary\": \"Payment capture completed via Sandbox\",\n  \"resource\": { \"id\": \"CAP-POSTMAN-8891\" }\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/paypal/webhook", "host": ["{{baseUrl}}"], "path": ["api", "paypal", "webhook"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "AI Financial Agent",
+      "item": [
+        {
+          "name": "Instruct Agent: Create Invoice with PayPal Link",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"message\": \"Create a $500 invoice for John for website development and prepare a PayPal payment link.\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/agent/chat", "host": ["{{baseUrl}}"], "path": ["api", "agent", "chat"] }
+          }
+        },
+        {
+          "name": "Instruct Agent: Verify Payment Status",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"message\": \"Did John pay?\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/agent/chat", "host": ["{{baseUrl}}"], "path": ["api", "agent", "chat"] }
+          }
+        },
+        {
+          "name": "Inspect AI Provider Status",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/ai/status", "host": ["{{baseUrl}}"], "path": ["api", "ai", "status"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Financial Analytics & Ledger",
+      "item": [
+        {
+          "name": "Get Summary Analytics",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/analytics", "host": ["{{baseUrl}}"], "path": ["api", "analytics"] }
+          }
+        },
+        {
+          "name": "Get Payments Ledger (AG Grid Format)",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/payments", "host": ["{{baseUrl}}"], "path": ["api", "payments"] }
+          }
+        },
+        {
+          "name": "Export Payments CSV",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/payments?format=csv", "host": ["{{baseUrl}}"], "path": ["api", "payments"] }
+          }
+        },
+        {
+          "name": "Get Reconciliation Audit Records",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/reconciliation", "host": ["{{baseUrl}}"], "path": ["api", "reconciliation"] }
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000"
+    }
+  ]
+}

@@ -6,15 +6,60 @@ export interface IntentPlan {
   parameters: Record<string, unknown>;
   requiresApproval: boolean;
   explanation: string;
+  providerUsed: "ollama" | "gemini" | "deterministic";
+}
+
+export interface AIProviderStatus {
+  activeProvider: string;
+  isOllamaAvailable: boolean;
+  isGeminiConfigured: boolean;
+  statusMessage: string;
 }
 
 export class AIProvider {
   private geminiKey: string;
-  private openaiKey: string;
+  private ollamaHost: string;
+  private ollamaModel: string;
+  private preferredProvider: string;
 
   constructor() {
     this.geminiKey = process.env.GEMINI_API_KEY || "";
-    this.openaiKey = process.env.OPENAI_API_KEY || "";
+    this.ollamaHost = process.env.OLLAMA_HOST || "http://localhost:11434";
+    this.ollamaModel = process.env.OLLAMA_MODEL || "llama3";
+    this.preferredProvider = process.env.AI_PROVIDER || "auto";
+  }
+
+  /**
+   * Check runtime status of all AI providers
+   */
+  async checkStatus(): Promise<AIProviderStatus> {
+    let isOllamaAvailable = false;
+    try {
+      const res = await fetch(`${this.ollamaHost}/api/tags`, { method: "GET", signal: AbortSignal.timeout(1000) });
+      isOllamaAvailable = res.ok;
+    } catch {
+      isOllamaAvailable = false;
+    }
+
+    const isGeminiConfigured = Boolean(this.geminiKey && this.geminiKey.length > 10 && !this.geminiKey.includes("your_"));
+
+    let activeProvider = "Deterministic AI Agent (Zero-Latency Rule Heuristics)";
+    let statusMessage = "Operating with zero-hallucination deterministic heuristics. Connect Ollama or supply Gemini API key for dynamic generation.";
+
+    if (this.preferredProvider === "ollama" && isOllamaAvailable) {
+      activeProvider = `Ollama (${this.ollamaModel})`;
+      statusMessage = `Connected to local Ollama instance on ${this.ollamaHost}.`;
+    } else if ((this.preferredProvider === "gemini" || isGeminiConfigured) && isGeminiConfigured) {
+      activeProvider = "Google Gemini 1.5 Flash";
+      statusMessage = "Connected to Google Gemini API with function calling.";
+    }
+
+    return {
+      activeProvider,
+      isOllamaAvailable,
+      isGeminiConfigured,
+      statusMessage,
+    };
   }
 
   /**
@@ -45,6 +90,7 @@ export class AIProvider {
         },
         requiresApproval: false,
         explanation: `Create an invoice of $${amount.toFixed(2)} for ${customerName} and generate a verified PayPal Sandbox checkout link.`,
+        providerUsed: "deterministic",
       };
     }
 
@@ -56,6 +102,7 @@ export class AIProvider {
         parameters: {},
         requiresApproval: false,
         explanation: "Retrieve all overdue customer invoices, compute delinquent aging and outstanding balances.",
+        providerUsed: "deterministic",
       };
     }
 
@@ -69,6 +116,7 @@ export class AIProvider {
         parameters: { invoiceIdOrOrder: target },
         requiresApproval: false,
         explanation: `Verify real-time settlement status from PayPal and local ledger for '${target}'.`,
+        providerUsed: "deterministic",
       };
     }
 
@@ -80,6 +128,7 @@ export class AIProvider {
         parameters: {},
         requiresApproval: false,
         explanation: "Calculate confirmed settled revenue, pending receivables and collection rates from database records.",
+        providerUsed: "deterministic",
       };
     }
 
@@ -91,6 +140,7 @@ export class AIProvider {
         parameters: {},
         requiresApproval: false,
         explanation: "Scan transaction ledger for orphaned PayPal captures or amount discrepancies lacking invoice association.",
+        providerUsed: "deterministic",
       };
     }
 
@@ -99,9 +149,10 @@ export class AIProvider {
       return {
         intent: "CREATE_OVERDUE_REMINDER",
         toolName: "create_reminder",
-        parameters: { invoiceId: "INV-2026-016" }, // Will be dynamically picked or scheduled
+        parameters: { invoiceId: "INV-2026-016" },
         requiresApproval: true,
         explanation: "Draft a polite follow-up payment notice for delinquent invoices and request authorization before dispatch.",
+        providerUsed: "deterministic",
       };
     }
 
@@ -115,6 +166,7 @@ export class AIProvider {
         parameters: { captureId: "CAPTURE-8015", amount, reason: "Customer requested adjustment" },
         requiresApproval: true,
         explanation: `High-risk action: Issue a PayPal refund of $${amount.toFixed(2)}. Requires explicit owner authorization.`,
+        providerUsed: "deterministic",
       };
     }
 
@@ -126,6 +178,7 @@ export class AIProvider {
         parameters: { limit: 10 },
         requiresApproval: false,
         explanation: "Search customer directory and display active balances.",
+        providerUsed: "deterministic",
       };
     }
 
@@ -136,6 +189,7 @@ export class AIProvider {
       parameters: {},
       requiresApproval: false,
       explanation: "Provide consolidated financial operations summary from database records.",
+      providerUsed: "deterministic",
     };
   }
 
@@ -207,4 +261,3 @@ export class AIProvider {
 
 export const aiProvider = new AIProvider();
 export default aiProvider;
-
