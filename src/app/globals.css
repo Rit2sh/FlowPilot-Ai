@@ -1,0 +1,78 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import "ag-grid-community/styles/ag-grid.css";
+@import "ag-grid-community/styles/ag-theme-alpine.css";
+
+:root {
+  --background: #080D1A;
+  --foreground: #F8FAFC;
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-feature-settings: "rlig" 1, "calt" 1;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #080D1A;
+}
+::-webkit-scrollbar-thumb {
+  background: #1E293B;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #00F59B;
+}
+
+/* AG Grid Dark Fintech Override */
+.ag-theme-alpine-dark {
+  --ag-background-color: #0D1629;
+  --ag-header-background-color: #080D1A;
+  --ag-odd-row-background-color: #0F172A;
+  --ag-header-foreground-color: #94A3B8;
+  --ag-foreground-color: #F8FAFC;
+  --ag-border-color: #1E293B;
+  --ag-row-hover-color: rgba(0, 245, 155, 0.08);
+  --ag-selected-row-background-color: rgba(0, 245, 155, 0.15);
+  --ag-font-family: inherit;
+  --ag-font-size: 13px;
+  border-radius: 0.75rem;
+  overflow: hidden;
+  border: 1px solid #1E293B !important;
+}
+
+.ag-theme-alpine-dark .ag-header-cell-label {
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-size: 11px;
+}
+
+/* Glassmorphism helpers */
+.glass-panel {
+  background: rgba(13, 22, 41, 0.75);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.glass-panel-glow {
+  background: rgba(13, 22, 41, 0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(0, 245, 155, 0.25);
+  box-shadow: 0 0 25px -5px rgba(0, 245, 155, 0.15);
+}
+
+.electric-glow {
+  text-shadow: 0 0 12px rgba(0, 245, 155, 0.5);
+}
+

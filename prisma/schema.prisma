@@ -1,0 +1,775 @@
+// FlowPilot AI - Normalized PostgreSQL Schema
+// Strict financial operations architecture with UUID primary keys and decimal precision
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum UserRole {
+  OWNER
+  ADMIN
+  MEMBER
+  VIEWER
+}
+
+enum BusinessType {
+  FREELANCER
+  AGENCY
+  SERVICES
+  ECOMMERCE
+  CONSULTANT
+  OTHER
+}
+
+enum InvoiceStatus {
+  DRAFT
+  ISSUED
+  PENDING
+  PAID
+  OVERDUE
+  CANCELLED
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+  PARTIALLY_REFUNDED
+}
+
+enum PaymentProvider {
+  PAYPAL
+  MANUAL
+  BANK_TRANSFER
+}
+
+enum PayPalOrderStatus {
+  CREATED
+  SAVED
+  APPROVED
+  VOIDED
+  COMPLETED
+  PAYER_ACTION_REQUIRED
+}
+
+enum PayPalCaptureStatus {
+  COMPLETED
+  DECLINED
+  PARTIALLY_REFUNDED
+  PENDING
+  REFUNDED
+}
+
+enum WebhookStatus {
+  RECEIVED
+  VERIFIED
+  PROCESSED
+  FAILED
+  DUPLICATE
+}
+
+enum TransactionType {
+  INCOMING_PAYMENT
+  REFUND
+  ADJUSTMENT
+  FEE
+}
+
+enum TransactionStatus {
+  SETTLED
+  PENDING
+  RECONCILED
+  UNMATCHED
+}
+
+enum MatchType {
+  EXACT
+  SUGGESTED
+  MANUAL
+  UNMATCHED
+}
+
+enum ReconciliationStatus {
+  MATCHED
+  DISCREPANCY
+  RESOLVED
+  UNMATCHED
+}
+
+enum ReminderTriggerType {
+  MANUAL
+  AUTOMATED
+}
+
+enum ReminderStatus {
+  SCHEDULED
+  SENT
+  CANCELLED
+  FAILED
+}
+
+enum ReminderChannel {
+  EMAIL
+  IN_APP
+}
+
+enum TriggerEvent {
+  INVOICE_OVERDUE
+  PAYMENT_FAILED
+  PAYMENT_RECEIVED
+  UPCOMING_DUE_DATE
+}
+
+enum ActionType {
+  SEND_REMINDER
+  PREPARE_DRAFT_REMINDER
+  NOTIFY_OWNER
+  RECONCILE
+}
+
+enum ExecutionStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+  SKIPPED
+}
+
+enum ActorType {
+  USER
+  AI_AGENT
+  SYSTEM
+  PAYPAL_WEBHOOK
+}
+
+enum RiskLevel {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  EXPIRED
+}
+
+enum NotificationType {
+  INFO
+  SUCCESS
+  WARNING
+  ALERT
+}
+
+enum ConnectedAccountEnvironment {
+  SANDBOX
+  PRODUCTION
+}
+
+enum ConnectedAccountStatus {
+  CONNECTED
+  DISCONNECTED
+  PENDING_VERIFICATION
+}
+
+enum BackgroundJobStatus {
+  QUEUED
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+// 1. User
+model User {
+  id               String            @id @default(uuid())
+  email            String            @unique
+  passwordHash     String
+  name             String
+  role             UserRole          @default(OWNER)
+  avatarUrl        String?
+  memberships      BusinessMember[]
+  aiConversations  AIConversation[]
+  approvalRequests ApprovalRequest[] @relation("UserApprovalRequests")
+  approvedRequests ApprovalRequest[] @relation("ApprovedByRequests")
+  auditLogs        AuditLog[]
+  notifications    Notification[]
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  deletedAt        DateTime?
+
+  @@index([email])
+}
+
+// 2. Business
+model Business {
+  id                     String                  @id @default(uuid())
+  name                   String
+  slug                   String                  @unique
+  businessType           BusinessType            @default(FREELANCER)
+  country                String                  @default("US")
+  defaultCurrency        String                  @default("USD")
+  timezone               String                  @default("UTC")
+  email                  String
+  description            String?
+  members                BusinessMember[]
+  customers              Customer[]
+  invoices               Invoice[]
+  payments               Payment[]
+  paypalOrders           PayPalOrder[]
+  paypalWebhookEvents    PayPalWebhookEvent[]
+  transactions           Transaction[]
+  reconciliationRecords  ReconciliationRecord[]
+  reminders              Reminder[]
+  automationRules        AutomationRule[]
+  automationExecutions   AutomationExecution[]
+  aiConversations        AIConversation[]
+  approvalRequests       ApprovalRequest[]
+  auditLogs              AuditLog[]
+  notifications          Notification[]
+  connectedAccounts      ConnectedAccount[]
+  backgroundJobs         BackgroundJob[]
+  createdAt              DateTime                @default(now())
+  updatedAt              DateTime                @updatedAt
+  deletedAt              DateTime?
+
+  @@index([slug])
+  @@index([email])
+}
+
+// 3. BusinessMember
+model BusinessMember {
+  id         String    @id @default(uuid())
+  businessId String
+  business   Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role       UserRole  @default(OWNER)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  @@unique([businessId, userId])
+  @@index([businessId])
+  @@index([userId])
+}
+
+// 4. Customer
+model Customer {
+  id          String            @id @default(uuid())
+  businessId  String
+  business    Business          @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  name        String
+  email       String
+  phone       String?
+  company     String?
+  address     String?
+  taxId       String?
+  notes       String?
+  isDemo      Boolean           @default(false)
+  contacts    CustomerContact[]
+  invoices    Invoice[]
+  payments    Payment[]
+  transactions Transaction[]
+  reminders   Reminder[]
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  deletedAt   DateTime?
+
+  @@index([businessId])
+  @@index([email])
+  @@index([isDemo])
+}
+
+// 5. CustomerContact
+model CustomerContact {
+  id         String    @id @default(uuid())
+  customerId String
+  customer   Customer  @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  name       String
+  email      String
+  phone      String?
+  isPrimary  Boolean   @default(false)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  @@index([customerId])
+}
+
+// 6. Invoice
+model Invoice {
+  id                    String                 @id @default(uuid())
+  businessId            String
+  business              Business               @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  customerId            String
+  customer              Customer               @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  invoiceNumber         String
+  status                InvoiceStatus          @default(DRAFT)
+  issueDate             DateTime               @default(now())
+  dueDate               DateTime
+  currency              String                 @default("USD")
+  subtotal              Decimal                @db.Decimal(12, 2)
+  taxRate               Decimal                @default(0.00) @db.Decimal(5, 2)
+  taxAmount             Decimal                @default(0.00) @db.Decimal(12, 2)
+  totalAmount           Decimal                @db.Decimal(12, 2)
+  paidAmount            Decimal                @default(0.00) @db.Decimal(12, 2)
+  notes                 String?
+  terms                 String?
+  paypalOrderId         String?
+  checkoutUrl           String?
+  isDemo                Boolean                @default(false)
+  items                 InvoiceItem[]
+  payments              Payment[]
+  paypalOrders          PayPalOrder[]
+  transactions          Transaction[]
+  reconciliationRecords ReconciliationRecord[]
+  reminders             Reminder[]
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
+  deletedAt             DateTime?
+
+  @@unique([businessId, invoiceNumber])
+  @@index([businessId])
+  @@index([customerId])
+  @@index([status])
+  @@index([dueDate])
+  @@index([paypalOrderId])
+}
+
+// 7. InvoiceItem
+model InvoiceItem {
+  id          String   @id @default(uuid())
+  invoiceId   String
+  invoice     Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  description String
+  quantity    Decimal  @default(1.00) @db.Decimal(10, 2)
+  unitPrice   Decimal  @db.Decimal(12, 2)
+  amount      Decimal  @db.Decimal(12, 2)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([invoiceId])
+}
+
+// 8. Payment
+model Payment {
+  id                    String                 @id @default(uuid())
+  businessId            String
+  business              Business               @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  customerId            String
+  customer              Customer               @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  invoiceId             String?
+  invoice               Invoice?               @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+  amount                Decimal                @db.Decimal(12, 2)
+  currency              String                 @default("USD")
+  status                PaymentStatus          @default(PENDING)
+  provider              PaymentProvider        @default(PAYPAL)
+  providerTransactionId String?                @unique
+  providerOrderId       String?
+  paymentMethod         String?                @default("paypal_wallet")
+  isDemo                Boolean                @default(false)
+  attempts              PaymentAttempt[]
+  refunds               Refund[]
+  transactions          Transaction[]
+  reconciliationRecords ReconciliationRecord[]
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
+
+  @@index([businessId])
+  @@index([customerId])
+  @@index([invoiceId])
+  @@index([providerOrderId])
+  @@index([status])
+}
+
+// 9. PaymentAttempt
+model PaymentAttempt {
+  id              String   @id @default(uuid())
+  paymentId       String
+  payment         Payment  @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  amount          Decimal  @db.Decimal(12, 2)
+  status          String
+  gatewayResponse Json?
+  errorMessage    String?
+  ipAddress       String?
+  userAgent       String?
+  createdAt       DateTime @default(now())
+
+  @@index([paymentId])
+}
+
+// 10. PayPalOrder
+model PayPalOrder {
+  id            String            @id @default(uuid())
+  businessId    String
+  business      Business          @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  invoiceId     String?
+  invoice       Invoice?          @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+  paypalOrderId String            @unique
+  intent        String            @default("CAPTURE")
+  status        PayPalOrderStatus @default(CREATED)
+  amount        Decimal           @db.Decimal(12, 2)
+  currency      String            @default("USD")
+  approvalUrl   String?
+  payerId       String?
+  payerEmail    String?
+  rawResponse   Json?
+  isDemo        Boolean           @default(false)
+  captures      PayPalCapture[]
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  @@index([businessId])
+  @@index([paypalOrderId])
+  @@index([invoiceId])
+}
+
+// 11. PayPalCapture
+model PayPalCapture {
+  id               String              @id @default(uuid())
+  paypalOrderId    String
+  paypalOrder      PayPalOrder         @relation(fields: [paypalOrderId], references: [id], onDelete: Cascade)
+  captureId        String              @unique
+  status           PayPalCaptureStatus @default(COMPLETED)
+  amount           Decimal             @db.Decimal(12, 2)
+  currency         String              @default("USD")
+  sellerProtection String?
+  transactionFee   Decimal?            @db.Decimal(12, 2)
+  netAmount        Decimal?            @db.Decimal(12, 2)
+  rawResponse      Json?
+  refunds          Refund[]
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+
+  @@index([paypalOrderId])
+  @@index([captureId])
+}
+
+// 12. PayPalWebhookEvent
+model PayPalWebhookEvent {
+  id             String        @id @default(uuid())
+  businessId     String?
+  business       Business?     @relation(fields: [businessId], references: [id], onDelete: SetNull)
+  eventId        String        @unique
+  eventType      String
+  summary        String?
+  resourceType   String
+  resourceId     String
+  status         WebhookStatus @default(RECEIVED)
+  signatureValid Boolean       @default(false)
+  payload        Json
+  processedAt    DateTime?
+  createdAt      DateTime      @default(now())
+
+  @@index([eventId])
+  @@index([eventType])
+  @@index([resourceId])
+  @@index([status])
+}
+
+// 13. Refund
+model Refund {
+  id              String         @id @default(uuid())
+  paymentId       String
+  payment         Payment        @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  paypalCaptureId String?
+  paypalCapture   PayPalCapture? @relation(fields: [paypalCaptureId], references: [id], onDelete: SetNull)
+  refundId        String         @unique
+  amount          Decimal        @db.Decimal(12, 2)
+  currency        String         @default("USD")
+  reason          String?
+  status          String         @default("COMPLETED")
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  @@index([paymentId])
+  @@index([refundId])
+}
+
+// 14. Transaction
+model Transaction {
+  id                    String                 @id @default(uuid())
+  businessId            String
+  business              Business               @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  customerId            String?
+  customer              Customer?              @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  invoiceId             String?
+  invoice               Invoice?               @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+  paymentId             String?
+  payment               Payment?               @relation(fields: [paymentId], references: [id], onDelete: SetNull)
+  type                  TransactionType        @default(INCOMING_PAYMENT)
+  amount                Decimal                @db.Decimal(12, 2)
+  currency              String                 @default("USD")
+  description           String
+  externalReference     String?
+  status                TransactionStatus      @default(SETTLED)
+  transactionDate       DateTime               @default(now())
+  isDemo                Boolean                @default(false)
+  reconciliationRecords ReconciliationRecord[]
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
+
+  @@index([businessId])
+  @@index([customerId])
+  @@index([invoiceId])
+  @@index([externalReference])
+  @@index([status])
+}
+
+// 15. ReconciliationRecord
+model ReconciliationRecord {
+  id                String               @id @default(uuid())
+  businessId        String
+  business          Business             @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  transactionId     String?
+  transaction       Transaction?         @relation(fields: [transactionId], references: [id], onDelete: SetNull)
+  paymentId         String?
+  payment           Payment?             @relation(fields: [paymentId], references: [id], onDelete: SetNull)
+  invoiceId         String?
+  invoice           Invoice?             @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+  paypalOrderId     String?
+  matchType         MatchType            @default(EXACT)
+  confidenceScore   Decimal              @default(1.00) @db.Decimal(4, 2)
+  status            ReconciliationStatus @default(MATCHED)
+  discrepancyReason String?
+  resolvedByUserId  String?
+  resolvedAt        DateTime?
+  notes             String?
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+
+  @@index([businessId])
+  @@index([transactionId])
+  @@index([invoiceId])
+  @@index([status])
+}
+
+// 16. Reminder
+model Reminder {
+  id             String              @id @default(uuid())
+  businessId     String
+  business       Business            @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  customerId     String
+  customer       Customer            @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  invoiceId      String
+  invoice        Invoice             @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  triggerType    ReminderTriggerType @default(AUTOMATED)
+  status         ReminderStatus      @default(SCHEDULED)
+  channel        ReminderChannel     @default(EMAIL)
+  recipientEmail String
+  subject        String
+  bodyContent    String
+  scheduledFor   DateTime
+  sentAt         DateTime?
+  isDemo         Boolean             @default(false)
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+
+  @@index([businessId])
+  @@index([invoiceId])
+  @@index([customerId])
+  @@index([status])
+}
+
+// 17. AutomationRule
+model AutomationRule {
+  id              String                @id @default(uuid())
+  businessId      String
+  business        Business              @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  name            String
+  description     String?
+  triggerEvent    TriggerEvent          @default(INVOICE_OVERDUE)
+  conditionConfig Json
+  actionType      ActionType            @default(SEND_REMINDER)
+  actionConfig    Json
+  isEnabled       Boolean               @default(true)
+  executions      AutomationExecution[]
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
+
+  @@index([businessId])
+  @@index([isEnabled])
+}
+
+// 18. AutomationExecution
+model AutomationExecution {
+  id              String          @id @default(uuid())
+  ruleId          String
+  rule            AutomationRule  @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+  businessId      String
+  business        Business        @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  triggerEntityId String
+  status          ExecutionStatus @default(PENDING)
+  resultSummary   String?
+  executionLog    Json?
+  executedAt      DateTime        @default(now())
+  createdAt       DateTime        @default(now())
+
+  @@index([ruleId])
+  @@index([businessId])
+  @@index([status])
+}
+
+// 19. AIConversation
+model AIConversation {
+  id             String            @id @default(uuid())
+  businessId     String
+  business       Business          @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title          String            @default("New Conversation")
+  status         String            @default("ACTIVE")
+  messages       AIMessage[]
+  toolExecutions AIToolExecution[]
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  @@index([businessId])
+  @@index([userId])
+}
+
+// 20. AIMessage
+model AIMessage {
+  id             String            @id @default(uuid())
+  conversationId String
+  conversation   AIConversation    @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender         String
+  content        String
+  metadata       Json?
+  toolExecutions AIToolExecution[]
+  createdAt      DateTime          @default(now())
+
+  @@index([conversationId])
+}
+
+// 21. AIToolExecution
+model AIToolExecution {
+  id                  String          @id @default(uuid())
+  conversationId      String
+  conversation        AIConversation  @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  messageId           String?
+  message             AIMessage?      @relation(fields: [messageId], references: [id], onDelete: SetNull)
+  toolName            String
+  inputParameters     Json
+  outputResult        Json?
+  status              String          @default("PROPOSED")
+  executionDurationMs Int?
+  error               String?
+  createdAt           DateTime        @default(now())
+
+  @@index([conversationId])
+  @@index([toolName])
+}
+
+// 22. ApprovalRequest
+model ApprovalRequest {
+  id                String         @id @default(uuid())
+  businessId        String
+  business          Business       @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  requestedByUserId String?
+  requestedByUser   User?          @relation("UserApprovalRequests", fields: [requestedByUserId], references: [id], onDelete: SetNull)
+  actionType        String
+  targetEntity      String
+  targetId          String
+  summary           String
+  details           Json
+  riskLevel         RiskLevel      @default(HIGH)
+  status            ApprovalStatus @default(PENDING)
+  approvedByUserId  String?
+  approvedByUser    User?          @relation("ApprovedByRequests", fields: [approvedByUserId], references: [id], onDelete: SetNull)
+  actionResult      Json?
+  expiresAt         DateTime
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+
+  @@index([businessId])
+  @@index([status])
+  @@index([riskLevel])
+}
+
+// 23. AuditLog
+model AuditLog {
+  id            String    @id @default(uuid())
+  businessId    String
+  business      Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  userId        String?
+  user          User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  actorType     ActorType @default(USER)
+  action        String
+  entityType    String
+  entityId      String
+  previousState Json?
+  newState      Json?
+  ipAddress     String?
+  userAgent     String?
+  createdAt     DateTime  @default(now())
+
+  @@index([businessId])
+  @@index([entityType, entityId])
+  @@index([actorType])
+  @@index([createdAt])
+}
+
+// 24. Notification
+model Notification {
+  id         String           @id @default(uuid())
+  businessId String
+  business   Business         @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  userId     String?
+  user       User?            @relation(fields: [userId], references: [id], onDelete: SetNull)
+  title      String
+  message    String
+  type       NotificationType @default(INFO)
+  link       String?
+  isRead     Boolean          @default(false)
+  createdAt  DateTime         @default(now())
+
+  @@index([businessId])
+  @@index([userId])
+  @@index([isRead])
+}
+
+// 25. ConnectedAccount
+model ConnectedAccount {
+  id           String                      @id @default(uuid())
+  businessId   String
+  business     Business                    @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  provider     PaymentProvider             @default(PAYPAL)
+  accountEmail String
+  accountId    String?
+  status       ConnectedAccountStatus      @default(CONNECTED)
+  environment  ConnectedAccountEnvironment @default(SANDBOX)
+  metadata     Json?
+  createdAt    DateTime                    @default(now())
+  updatedAt    DateTime                    @updatedAt
+
+  @@unique([businessId, provider, environment])
+  @@index([businessId])
+}
+
+// 26. BackgroundJob
+model BackgroundJob {
+  id          String              @id @default(uuid())
+  businessId  String?
+  business    Business?           @relation(fields: [businessId], references: [id], onDelete: SetNull)
+  queueName   String              @default("default")
+  jobType     String
+  payload     Json
+  status      BackgroundJobStatus @default(QUEUED)
+  attempts    Int                 @default(0)
+  maxAttempts Int                 @default(3)
+  lastError   String?
+  runAt       DateTime            @default(now())
+  completedAt DateTime?
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+
+  @@index([status, runAt])
+  @@index([queueName])
+}
+
