@@ -40,3 +40,4 @@ npx prisma db push
 node prisma/seed.js
 ```
 This initializes all 26 entities and seeds the demo business workspace.
+

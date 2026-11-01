@@ -14,19 +14,35 @@ async function main() {
     where: { email: "demo@flowpilot.ai" },
     update: {
       passwordHash,
-      name: "Alex Vance (Founder)",
+      name: "Ritesh Rajput (Founder)",
       role: "OWNER",
     },
     create: {
       email: "demo@flowpilot.ai",
       passwordHash,
-      name: "Alex Vance (Founder)",
+      name: "Ritesh Rajput (Founder)",
       role: "OWNER",
       avatarUrl: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
     },
   });
 
-  console.log(`✅ Demo User: ${demoUser.email} (Password: Demo1234!)`);
+  const riteshUser = await prisma.user.upsert({
+    where: { email: "ritesh@flowpilot.ai" },
+    update: {
+      passwordHash,
+      name: "Ritesh Rajput (Founder)",
+      role: "OWNER",
+    },
+    create: {
+      email: "ritesh@flowpilot.ai",
+      passwordHash,
+      name: "Ritesh Rajput (Founder)",
+      role: "OWNER",
+      avatarUrl: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
+    },
+  });
+
+  console.log(`✅ Demo User: ${demoUser.email} / ${riteshUser.email} (Password: Demo1234!)`);
 
   // 2. Create or update Demo Business
   const demoBusiness = await prisma.business.upsert({
@@ -64,6 +80,21 @@ async function main() {
     create: {
       businessId: demoBusiness.id,
       userId: demoUser.id,
+      role: "OWNER",
+    },
+  });
+
+  await prisma.businessMember.upsert({
+    where: {
+      businessId_userId: {
+        businessId: demoBusiness.id,
+        userId: riteshUser.id,
+      },
+    },
+    update: { role: "OWNER" },
+    create: {
+      businessId: demoBusiness.id,
+      userId: riteshUser.id,
       role: "OWNER",
     },
   });
@@ -223,6 +254,8 @@ async function main() {
 
   // 6. Seed 30 Realistic Transactions, Payments & PayPal Captures
   console.log("⚡ Seeding 30 transactions, payments & PayPal capture logs...");
+  await prisma.payPalCapture.deleteMany({ where: { paypalOrder: { businessId: demoBusiness.id } } });
+  await prisma.payPalOrder.deleteMany({ where: { businessId: demoBusiness.id } });
   await prisma.transaction.deleteMany({ where: { businessId: demoBusiness.id } });
   await prisma.payment.deleteMany({ where: { businessId: demoBusiness.id } });
   await prisma.reconciliationRecord.deleteMany({ where: { businessId: demoBusiness.id } });

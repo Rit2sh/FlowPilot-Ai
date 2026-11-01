@@ -38,7 +38,7 @@ export default function LoginPage() {
   };
 
   const handleDemoLogin = async () => {
-    setEmail("demo@flowpilot.ai");
+    setEmail("ritesh@flowpilot.ai");
     setPassword("Demo1234!");
     setLoading(true);
     setError("");
@@ -47,7 +47,7 @@ export default function LoginPage() {
       const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: "demo@flowpilot.ai", password: "Demo1234!" }),
+        body: JSON.stringify({ email: "ritesh@flowpilot.ai", password: "Demo1234!" }),
       });
 
       const data = await res.json();
@@ -100,7 +100,7 @@ export default function LoginPage() {
             disabled={loading}
             className="w-full bg-[#00F59B] hover:bg-[#10E79D] text-[#080D1A] font-extrabold text-xs py-2.5 rounded-xl shadow-glow transition-all flex items-center justify-center gap-1.5"
           >
-            Log In as Demo Founder (1-Click) <ArrowRight className="w-3.5 h-3.5" />
+            Log In as Ritesh (1-Click Demo) <ArrowRight className="w-3.5 h-3.5" />
           </button>
         </div>
 
