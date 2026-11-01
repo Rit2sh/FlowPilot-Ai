@@ -190,6 +190,16 @@ class PayPalClient {
             },
           });
 
+          if (params.invoiceId) {
+            await prisma.invoice.update({
+              where: { id: params.invoiceId },
+              data: {
+                paypalOrderId: data.id,
+                checkoutUrl: approveLink || `https://www.sandbox.paypal.com/checkoutnow?token=${data.id}`,
+              },
+            });
+          }
+
           return {
             id: data.id,
             status: data.status,

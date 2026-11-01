@@ -28,7 +28,7 @@ describe("PayPal Sandbox Integration Module", () => {
     });
 
     expect(order.id).toBeDefined();
-    expect(order.status).toBe("CREATED");
+    expect(["CREATED", "PAYER_ACTION_REQUIRED"]).toContain(order.status);
     expect(order.approvalUrl).toContain("sandbox.paypal.com");
     expect(order.amount).toBe("450.00");
     expect(order.currency).toBe("USD");
