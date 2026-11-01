@@ -33,6 +33,8 @@ export class AIProvider {
    * Check runtime status of all AI providers
    */
   async checkStatus(): Promise<AIProviderStatus> {
+    const geminiKey = process.env.GEMINI_API_KEY || this.geminiKey;
+    const preferredProvider = process.env.AI_PROVIDER || this.preferredProvider;
     let isOllamaAvailable = false;
     try {
       const res = await fetch(`${this.ollamaHost}/api/tags`, {
@@ -45,17 +47,17 @@ export class AIProvider {
     }
 
     const isGeminiConfigured = Boolean(
-      this.geminiKey && this.geminiKey.length > 10 && !this.geminiKey.includes("your_")
+      geminiKey && geminiKey.length > 10 && !geminiKey.includes("your_")
     );
 
     let activeProvider = "FlowPilot Autonomous NLU (Zero-Hallucination Engine)";
     let statusMessage =
       "Operating with deterministic schema-grounded NLU. Add GEMINI_API_KEY or launch Ollama for dynamic generative calling.";
 
-    if (this.preferredProvider === "ollama" && isOllamaAvailable) {
+    if (preferredProvider === "ollama" && isOllamaAvailable) {
       activeProvider = `Ollama (${this.ollamaModel})`;
       statusMessage = `Connected to local Ollama instance on ${this.ollamaHost}.`;
-    } else if ((this.preferredProvider === "gemini" || isGeminiConfigured) && isGeminiConfigured) {
+    } else if ((preferredProvider === "gemini" || isGeminiConfigured) && isGeminiConfigured) {
       activeProvider = "Google Gemini 1.5 Flash";
       statusMessage = "Connected to Google Gemini API with native function calling.";
     }
@@ -72,12 +74,13 @@ export class AIProvider {
    * Optional Gemini API calling if API key is present
    */
   private async tryGemini(prompt: string): Promise<IntentPlan | null> {
-    if (!this.geminiKey || this.geminiKey.includes("your_") || this.geminiKey.length < 10) {
+    const key = process.env.GEMINI_API_KEY || this.geminiKey;
+    if (!key || key.includes("your_") || key.length < 10) {
       return null;
     }
 
     try {
-      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${this.geminiKey}`;
+      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`;
       const systemPrompt = `You are FlowPilot AI, an autonomous financial operations agent for businesses.
 Classify the user prompt into one of the available operations:
 - create_invoice (parameters: customerName, amount, description, preparePayPalLink: true)
@@ -103,7 +106,10 @@ Respond ONLY with valid JSON:
 
       const res = await fetch(endpoint, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "x-goog-api-key": this.geminiKey,
+        },
         body: JSON.stringify({
           contents: [
             {
