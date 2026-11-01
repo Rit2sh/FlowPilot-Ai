@@ -80,7 +80,7 @@ export class AIProvider {
     }
 
     try {
-      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`;
+      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${key}`;
       const systemPrompt = `You are FlowPilot AI, an autonomous financial operations agent for businesses.
 Classify the user prompt into one of the available operations:
 - create_invoice (parameters: customerName, amount, description, preparePayPalLink: true)
@@ -93,7 +93,7 @@ Classify the user prompt into one of the available operations:
 - search_customers
 - search_invoices
 - list_payments
-- conversational (for general questions, greetings, help)
+- conversational (for general questions, greetings, help, chit-chat)
 
 Respond ONLY with valid JSON:
 {
@@ -108,7 +108,6 @@ Respond ONLY with valid JSON:
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "x-goog-api-key": this.geminiKey,
         },
         body: JSON.stringify({
           contents: [
@@ -157,14 +156,19 @@ Respond ONLY with valid JSON:
     const geminiPlan = await this.tryGemini(raw);
     if (geminiPlan) return geminiPlan;
 
-    // 1. Greetings & Conversational Queries
-    if (
+    // 1. Comprehensive Greetings & Conversational Queries
+    // Handles "hi", "hii", "hiii", "hello", "hey", "heyy", "yo", "sup", "good morning", etc.
+    const isGreeting =
+      /^(h+i+|h+e+y+|h+e+l+l+o+|h+o+l+a+|y+o+|s+u+p+|w+a+s+s+u+p+|g+o+o+d\s+(?:morning|afternoon|evening|day)|greetings|howdy)\b/i.test(text) ||
       text === "hi" ||
+      text === "hii" ||
+      text === "hiii" ||
       text === "hello" ||
       text === "hey" ||
-      text.startsWith("hi ") ||
-      text.startsWith("hello ") ||
-      text.startsWith("hey ") ||
+      text === "heyy";
+
+    if (
+      isGreeting ||
       text.includes("who are you") ||
       text.includes("what are you") ||
       text.includes("what can you do") ||
@@ -179,7 +183,7 @@ Respond ONLY with valid JSON:
         requiresApproval: false,
         explanation:
           `👋 **Hello! I am FlowPilot AI**, your autonomous financial operations agent.\n\n` +
-          `I connect directly to your PostgreSQL ledger and PayPal Developer Sandbox to manage payments without manual friction:\n\n` +
+          `I connect directly to your PostgreSQL database and PayPal Sandbox to run financial tasks for your business:\n\n` +
           `• 📝 **Create Invoices with PayPal Checkout**: *"Create a $500 invoice for John for website development"*\n` +
           `• 🔍 **Payment Verification**: *"Did John pay?"* or *"Check payment status for INV-2026-001"*\n` +
           `• ⚠️ **Overdue Tracking**: *"Show all customers who haven't paid"*\n` +
@@ -187,7 +191,44 @@ Respond ONLY with valid JSON:
           `• 🔄 **Reconciliation**: *"Find payments that don't have matching invoices"*\n` +
           `• ✉️ **Follow-up Reminders**: *"Prepare a payment reminder for overdue customers"*\n` +
           `• 👥 **Client Ledger**: *"Show my customers"* or *"List recent payments"*\n\n` +
-          `What financial operation would you like to run today?`,
+          `What financial operation would you like to perform?`,
+        providerUsed: "conversational",
+      };
+    }
+
+    // 1b. Polite Chit-Chat & Status
+    if (text.includes("how are you") || text.includes("how r u") || text.includes("how's it going")) {
+      return {
+        intent: "CONVERSATIONAL",
+        toolName: "conversational",
+        parameters: {},
+        requiresApproval: false,
+        explanation:
+          `I'm operating at 100% efficiency with verified database grounding and active PayPal Sandbox connectivity! 🚀\n\n` +
+          `How can I assist your business finances today? You can ask me to create an invoice, check client payments, or inspect overdue accounts.`,
+        providerUsed: "conversational",
+      };
+    }
+
+    if (text.includes("thank") || text === "thx" || text === "ty") {
+      return {
+        intent: "CONVERSATIONAL",
+        toolName: "conversational",
+        parameters: {},
+        requiresApproval: false,
+        explanation:
+          `You're very welcome! FlowPilot is always on standby to manage your payment workflows, generate PayPal links, and reconcile your ledger.`,
+        providerUsed: "conversational",
+      };
+    }
+
+    if (text === "ok" || text === "okay" || text === "cool" || text === "great" || text === "got it" || text === "nice") {
+      return {
+        intent: "CONVERSATIONAL",
+        toolName: "conversational",
+        parameters: {},
+        requiresApproval: false,
+        explanation: `Understood! Ready whenever you want to issue another financial command.`,
         providerUsed: "conversational",
       };
     }
@@ -414,14 +455,23 @@ Respond ONLY with valid JSON:
       };
     }
 
-    // Default Fallback: Financial operations overview
+    // Default Fallback: Helpful conversational response instead of dumping arbitrary revenue
     return {
-      intent: "GET_REVENUE_SUMMARY",
-      toolName: "get_revenue_summary",
+      intent: "CONVERSATIONAL",
+      toolName: "conversational",
       parameters: {},
       requiresApproval: false,
-      explanation: "Provide consolidated financial operations summary from database records.",
-      providerUsed: "deterministic",
+      explanation:
+        `I received your instruction: *"${raw}"*.\n\n` +
+        `As your autonomous financial operations agent, here are some operations you can command me to run:\n\n` +
+        `• 📝 **Create Invoices with PayPal Checkout**: *"Create a $500 invoice for John for website development"*\n` +
+        `• 🔍 **Check Payment Status**: *"Did John pay?"* or *"Check payment status for INV-2026-001"*\n` +
+        `• ⚠️ **Analyze Overdue Invoices**: *"Show all customers who haven't paid"*\n` +
+        `• 📊 **Inspect Financial Revenue**: *"How much revenue did I receive this month?"*\n` +
+        `• 🔄 **Reconcile Transactions**: *"Find payments that don't have matching invoices"*\n` +
+        `• ✉️ **Send Reminders**: *"Prepare a payment reminder for overdue customers"*\n` +
+        `• 👥 **View Customer Ledger**: *"Show customers"* or *"Show payments"*`,
+      providerUsed: "conversational",
     };
   }
 
