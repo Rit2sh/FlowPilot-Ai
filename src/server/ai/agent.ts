@@ -70,10 +70,29 @@ export class FinancialAgent {
     const plan = await aiProvider.planExecution(params.instruction);
     recordStep("PLANNING", "Execution Plan Prepared", plan.explanation);
 
-    const tool = ALL_TOOLS[plan.toolName];
-    if (!tool) {
-      throw new Error(`Tool '${plan.toolName}' is not registered in agent tool registry.`);
+    // If conversational / informational guidance (e.g. greeting, help, commands)
+    if (plan.intent === "CONVERSATIONAL" || plan.toolName === "conversational" || !ALL_TOOLS[plan.toolName]) {
+      recordStep("RETRIEVING", "Knowledge Base Consulted", "Consulted financial operations platform guidelines.");
+      recordStep("COMPLETED", "Guidance Delivered", "Responded directly with financial operations guidance.");
+
+      const assistantMsg = await prisma.aIMessage.create({
+        data: {
+          conversationId: convId,
+          sender: "ASSISTANT",
+          content: plan.explanation,
+        },
+      });
+
+      return {
+        conversationId: convId,
+        messageId: assistantMsg.id,
+        content: plan.explanation,
+        steps,
+        approvalRequired: false,
+      };
     }
+
+    const tool = ALL_TOOLS[plan.toolName];
 
     // 3. Stage: Permission & Approval Check
     if (tool.riskLevel === "HIGH" || plan.requiresApproval) {

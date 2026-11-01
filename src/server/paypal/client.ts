@@ -90,6 +90,7 @@ class PayPalClient {
           "Content-Type": "application/x-www-form-urlencoded",
         },
         body: "grant_type=client_credentials",
+        signal: AbortSignal.timeout(3500),
       });
 
       if (!response.ok) {
@@ -164,6 +165,7 @@ class PayPalClient {
             "PayPal-Request-Id": `fp-order-${Date.now()}-${Math.random().toString(36).substring(7)}`,
           },
           body: JSON.stringify(requestBody),
+          signal: AbortSignal.timeout(4000),
         });
 
         if (response.ok) {
@@ -279,6 +281,7 @@ class PayPalClient {
             "Content-Type": "application/json",
             "PayPal-Request-Id": `fp-cap-${orderId}`,
           },
+          signal: AbortSignal.timeout(2500),
         });
 
         if (response.ok) {
@@ -521,6 +524,7 @@ class PayPalClient {
             webhook_id: params.webhookId || this.webhookId,
             webhook_event: params.webhookEvent,
           }),
+          signal: AbortSignal.timeout(2500),
         });
 
         if (response.ok) {

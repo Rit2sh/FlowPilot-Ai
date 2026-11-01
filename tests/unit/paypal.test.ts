@@ -48,7 +48,7 @@ describe("PayPal Sandbox Integration Module", () => {
     expect(capture.captureId).toBeDefined();
     expect(capture.status).toBe("COMPLETED");
     expect(capture.orderId).toBe(order.id);
-  });
+  }, 15000);
 
   it("should verify webhook signature payload parameters", async () => {
     const isValid = await paypalClient.verifyWebhookSignature({

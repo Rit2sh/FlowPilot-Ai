@@ -95,3 +95,4 @@ sequenceDiagram
 - **GitHub Repository:** [https://github.com/Rit2sh/FlowPilot-Ai](https://github.com/Rit2sh/FlowPilot-Ai)
 - **Founder / Lead Architect:** Ritesh Rajput (`ritesh@flowpilot.ai`)
 - **Built for:** PayPal AI Hackathon 2026 on Devpost
+

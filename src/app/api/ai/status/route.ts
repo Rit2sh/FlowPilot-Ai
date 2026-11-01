@@ -5,3 +5,4 @@ export async function GET() {
   const status = await aiProvider.checkStatus();
   return NextResponse.json(status);
 }
+

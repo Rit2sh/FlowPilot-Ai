@@ -22,3 +22,4 @@ This script is specifically structured for a high-impact, high-energy 2 minute 4
 - **Audio:** Clear microphone audio without background noise.
 - **Browser:** Maximize the browser window (F11) with zoom set to 100% or 110% for crisp readability.
 - **Duration:** Keep strictly between 2:30 and 2:50 to ensure compliance with the <3 minute Devpost rule.
+

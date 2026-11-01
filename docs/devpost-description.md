@@ -44,3 +44,4 @@ FlowPilot AI bridges natural-language instruction with deterministic financial e
 3. **Genuine PayPal Sandbox Integration**: Real orders, approval links, and webhook verification.
 4. **AG Grid Community Integration**: Enterprise-grade tabular financial intelligence.
 5. **1-Click Judge Demo Mode**: Instant access with 8 pre-seeded customers, 20 invoices, and 30 transactions.
+

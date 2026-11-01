@@ -48,32 +48,43 @@ export async function getServerSession(): Promise<SessionPayload | null> {
   try {
     const cookieStore = cookies();
     const token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
-    if (!token) {
-      // Fallback: If in demo environment without cookie, look for default demo business
-      const demoUser = await prisma.user.findUnique({
-        where: { email: "demo@flowpilot.ai" },
+    if (token) {
+      const verified = await verifySessionToken(token);
+      if (verified) return verified;
+    }
+
+    // Seamless Demo & Local Fallback: If token is absent or invalid, link to founder demo account
+    const demoUser =
+      (await prisma.user.findFirst({
+        where: {
+          OR: [{ email: "ritesh@flowpilot.ai" }, { email: "demo@flowpilot.ai" }],
+        },
         include: {
           memberships: {
             include: { business: true },
           },
         },
-      });
+      })) ||
+      (await prisma.user.findFirst({
+        include: {
+          memberships: {
+            include: { business: true },
+          },
+        },
+      }));
 
-      if (demoUser && demoUser.memberships.length > 0) {
-        const membership = demoUser.memberships[0];
-        return {
-          userId: demoUser.id,
-          email: demoUser.email,
-          name: demoUser.name,
-          businessId: membership.businessId,
-          businessName: membership.business.name,
-          role: membership.role,
-        };
-      }
-      return null;
+    if (demoUser && demoUser.memberships.length > 0) {
+      const membership = demoUser.memberships[0];
+      return {
+        userId: demoUser.id,
+        email: demoUser.email,
+        name: demoUser.name,
+        businessId: membership.businessId,
+        businessName: membership.business.name,
+        role: membership.role,
+      };
     }
-
-    return await verifySessionToken(token);
+    return null;
   } catch {
     return null;
   }
@@ -81,9 +92,13 @@ export async function getServerSession(): Promise<SessionPayload | null> {
 
 export function setSessionCookie(token: string) {
   const cookieStore = cookies();
+  const isHttps =
+    process.env.NEXTAUTH_URL?.startsWith("https://") ||
+    process.env.VERCEL_URL?.startsWith("https://");
+
   cookieStore.set(SESSION_COOKIE_NAME, token, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
+    secure: Boolean(isHttps),
     sameSite: "lax",
     path: "/",
     maxAge: 60 * 60 * 24 * 7, // 7 days

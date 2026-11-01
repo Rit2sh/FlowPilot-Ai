@@ -109,3 +109,4 @@ For quick evaluation and hackathon testing:
 - **Password:** `Demo1234!`
 - **Role:** Business Owner (`Apex Digital Dynamics`)
 - **Default Currency:** USD ($)
+
